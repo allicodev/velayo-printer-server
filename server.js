@@ -15,7 +15,7 @@ const {
 } = require("node-thermal-printer");
 
 let printer = new ThermalPrinter({
-  interface: "printer:STMicroelectronics_POS80_Printer_USB",
+  interface: `printer:${driver.getDefaultPrinterName()}`,
   driver,
   characterSet: CharacterSet.WPC1252,
   removeSpecialCharacters: false,
@@ -28,7 +28,7 @@ let printer = new ThermalPrinter({
 });
 
 let printer_with_line = new ThermalPrinter({
-  interface: "printer:STMicroelectronics_POS80_Printer_USB",
+  interface: `printer:${driver.getDefaultPrinterName()}`,
   driver,
   characterSet: CharacterSet.WPC1252,
   removeSpecialCharacters: false,
@@ -90,6 +90,8 @@ app.get("/kill-server", (req, res) => {
 });
 
 app.post("/print/shopee-collect", async (req, res) => {
+  console.log(driver.getPrinters());
+  return res.json({ success: true, message: "Print Successfully" });
   const { name, parcelNum, collectionPins } = req.body;
 
   if (
@@ -190,7 +192,6 @@ app.post("/print/receipt", async (req, res) => {
       },
     ];
   };
-
   return printer.isPrinterConnected().then(async () => {
     printer.alignCenter();
     printer.bold(true);
