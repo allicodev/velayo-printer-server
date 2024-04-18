@@ -90,8 +90,6 @@ app.get("/kill-server", (req, res) => {
 });
 
 app.post("/print/shopee-collect", async (req, res) => {
-  console.log(driver.getPrinters());
-  return res.json({ success: true, message: "Print Successfully" });
   const { name, parcelNum, collectionPins } = req.body;
 
   if (
