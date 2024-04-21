@@ -211,7 +211,7 @@ app.post("/print/receipt", async (req, res) => {
     printer.println("NON-VAT Reg. TIN 282-246-742-00000");
     printer.println("REPRINT RECEIPT");
     printer.newLine();
-    printer.println(`ACKNOWLEGDEMENT RECEIPT #: ${receiptNo}`);
+    printer.println(`ACKNOWLEDGEMENT RECEIPT #: ${receiptNo}`);
     printer.newLine();
     printer.bold(true);
     printer.println(getTitle());
