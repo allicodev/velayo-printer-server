@@ -8,6 +8,8 @@ const dayjs = require("dayjs");
 const port = 3001;
 const app = express();
 
+// TODO: remove all other details with _money
+
 const {
   ThermalPrinter,
   CharacterSet,
@@ -192,6 +194,7 @@ app.post("/print/receipt", async (req, res) => {
   };
   return printer.isPrinterConnected().then(async () => {
     printer.alignCenter();
+    await printer.printImage("./assets/header-logo.png");
     printer.bold(true);
     printer.setTextQuadArea();
     printer.setTypeFontB();
@@ -202,7 +205,7 @@ app.post("/print/receipt", async (req, res) => {
     printer.println("Owned and Operated by:");
     printer.println("KRISTOPHER RYAN V. VELAYO");
     printer.newLine();
-    printer.println("P9 SUICO ST BRGY TABOK MANDAUE CITY CEBU");
+    printer.println("SB Cabahug Street, Ibabao-Estancia, Mandaue City Cebu");
     printer.newLine();
     printer.println("Contact #:");
     printer.println("NON-VAT Reg. TIN 282-246-742-00000");
@@ -284,18 +287,14 @@ app.post("/print/receipt", async (req, res) => {
     printer.println(
       `DATE/TIME: ${dayjs(new Date()).format("YYYY-MM-DD hh:mmA")}`
     );
-    printer.println(
-      "MACHINE SERIAL NO. : ASUS / X509J / L4N0CX01M67615B & DELL / Inspiren 3501 / F470HB3"
-    );
+    printer.println("MACHINE SERIAL NO. : ASUS / X509J / L4N0CX01M67615B");
     printer.newLine();
-    printer.println(
-      "SPM NO: SP112022-080-0111027-00000 & SP112022-080-0111028-00000"
-    );
+    printer.println("SPM NO: SP112022-080-0111027-00000");
     printer.newLine();
     printer.bold(true);
     printer.alignCenter();
-    printer.println("Powered By VELAYO E-SERVICE");
-    // printer.partialCut();
+    printer.println("Powered By ECPAY");
+    printer.partialCut();
 
     return await new Promise(async (resolve, reject) => {
       return await printer
