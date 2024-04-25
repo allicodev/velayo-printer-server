@@ -4,6 +4,7 @@ const express = require("express");
 const find = require("find-process");
 const bodyParser = require("body-parser");
 const dayjs = require("dayjs");
+const axios = require("axios");
 
 const port = 3001;
 const app = express();
@@ -148,167 +149,201 @@ app.post("/print/shopee-collect", async (req, res) => {
 });
 
 app.post("/print/receipt", async (req, res) => {
-  const { type, billerName, receiptNo, refNo, fee, amount } = req.body;
+  const { type, billerName, receiptNo, refNo, fee, amount, branchId } =
+    req.body;
   let { otherDetails } = req.body;
   otherDetails = JSON.parse(otherDetails);
 
-  const excludeOtherDetails = ["billerId", "transactionType", "amount", "fee"];
+  await axios
+    .get(
+      `https://velayo-eservice.vercel.app/api/branch/get-branch?_id=${branchId}`
+    )
+    .then(({ data }) => {
+      if (data.success) {
+        const { address, device, spm } = data.data;
+        const excludeOtherDetails = [
+          "billerId",
+          "transactionType",
+          "amount",
+          "fee",
+        ];
 
-  const getTitle = () => {
-    switch (type) {
-      case "bills":
-        return "BILLS PAYMENT";
-      case "wallet":
-        return "E-WALLET";
-      case "eload":
-        return "E-LOAD";
-      case "miscellaneous":
-        return "MISCELLANEOUS";
-      case "shopee":
-        return "SHOPPE SELF COLLECT";
-    }
-  };
+        const getTitle = () => {
+          switch (type) {
+            case "bills":
+              return "BILLS PAYMENT";
+            case "wallet":
+              return "E-WALLET";
+            case "eload":
+              return "E-LOAD";
+            case "miscellaneous":
+              return "MISCELLANEOUS";
+            case "shopee":
+              return "SHOPPE SELF COLLECT";
+          }
+        };
 
-  const generateOtherDetails = (name, value) => {
-    return [
-      {
-        text: `${name.replace(/_/g, " ").toLocaleUpperCase()}:`,
-        align: "LEFT",
-        width: 0.5,
-        bold: true,
-      },
-      {
-        text: (typeof value == "number" ? value.toString() : value).includes(
-          "_money"
-        )
-          ? value.split("_")[0] + ".00"
-          : (typeof value == "number"
-              ? value.toString()
-              : value
-            ).toLocaleUpperCase(),
-        align: "RIGHT",
-        width: 0.5,
-        bold: true,
-      },
-    ];
-  };
-  return printer.isPrinterConnected().then(async () => {
-    printer.alignCenter();
-    await printer.printImage("./assets/header-logo.png");
-    printer.bold(true);
-    printer.setTextQuadArea();
-    printer.setTypeFontB();
-    printer.println("VELAYO BILLS PAYMENT AND");
-    printer.println("REMITTANCE SERVICES");
-    printer.setTextNormal();
-    printer.newLine();
-    printer.println("Owned and Operated by:");
-    printer.println("KRISTOPHER RYAN V. VELAYO");
-    printer.newLine();
-    printer.println("SB Cabahug Street, Ibabao-Estancia, Mandaue City Cebu");
-    printer.newLine();
-    printer.println("Contact #:");
-    printer.println("NON-VAT Reg. TIN 282-246-742-00000");
-    printer.println("REPRINT RECEIPT");
-    printer.newLine();
-    printer.println(`ACKNOWLEDGEMENT RECEIPT #: ${receiptNo}`);
-    printer.newLine();
-    printer.bold(true);
-    printer.println(getTitle());
-    printer.drawLine();
-    printer.newLine();
-    printer.println("TRANSACTION DETAILS");
-    printer.newLine();
-    printer.tableCustom([
-      // row
-      { text: "TRANSACTION REF NO:", align: "LEFT", width: 0.5, bold: true },
-      {
-        text: refNo.toLocaleUpperCase(),
-        align: "RIGHT",
-        width: 0.5,
-        bold: true,
-      },
-      // end row
-      // row
-      { text: "BILLER NAME:", align: "LEFT", width: 0.5, bold: true },
-      {
-        text: billerName.toLocaleUpperCase(),
-        align: "RIGHT",
-        width: 0.5,
-        bold: true,
-      },
-      // end row
-      // other details generation
-      ...[].concat(
-        ...Object.keys(otherDetails)
-          .filter(
-            (e) =>
-              !excludeOtherDetails.includes(e) &&
-              !e.includes("pin_collection_#")
-          )
-          .map((e) => generateOtherDetails(e, otherDetails[e]))
-      ),
-      // end other details
-      { text: "AMOUNT:", align: "LEFT", width: 0.5, bold: true },
-      {
-        text: `${amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.00`,
-        align: "RIGHT",
-        width: 0.5,
-      },
-      // end row
-      // row
-      { text: "CONVENIENCE FEE:", align: "LEFT", width: 0.5, bold: true },
-      {
-        text: `${fee.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.00`,
-        align: "RIGHT",
-        width: 0.5,
-      },
-      // end row
-      // row
-      { text: "TOTAL AMOUNT:", align: "LEFT", width: 0.5, bold: true },
-      {
-        text: `${(amount + fee)
-          .toString()
-          .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.00`,
-        align: "RIGHT",
-        width: 0.5,
-      },
-      // end row
-    ]);
-    printer.newLine();
-    printer.bold(true);
-    printer.drawLine();
-    printer.newLine();
-    printer.println("THIS IS NOT AN OFFICIAL RECEIPT");
-    printer.println("THIS OR WILL BE ISSUED BY THE BILLING");
-    printer.println("COMPANY");
-    printer.newLine();
-    printer.alignLeft();
-    printer.println(
-      `DATE/TIME: ${dayjs(new Date()).format("YYYY-MM-DD hh:mmA")}`
-    );
-    printer.println("MACHINE SERIAL NO. : ASUS / X509J / L4N0CX01M67615B");
-    printer.newLine();
-    printer.println("SPM NO: SP112022-080-0111027-00000");
-    printer.newLine();
-    printer.bold(true);
-    printer.alignCenter();
-    printer.println("Powered By ECPAY");
-    printer.partialCut();
+        const generateOtherDetails = (name, value) => {
+          return [
+            {
+              text: `${name.replace(/_/g, " ").toLocaleUpperCase()}:`,
+              align: "LEFT",
+              width: 0.5,
+              bold: true,
+            },
+            {
+              text: (typeof value == "number"
+                ? value.toString()
+                : value
+              ).includes("_money")
+                ? value.split("_")[0] + ".00"
+                : (typeof value == "number"
+                    ? value.toString()
+                    : value
+                  ).toLocaleUpperCase(),
+              align: "RIGHT",
+              width: 0.5,
+              bold: true,
+            },
+          ];
+        };
 
-    return await new Promise(async (resolve, reject) => {
-      return await printer
-        .execute()
-        .then(() => {
-          printer.clear();
-          res.json({ success: true, message: "Print Successfully" });
-          resolve("print success");
-        })
-        .catch((e) =>
-          res.json({ success: false, message: "Printer Error: " + e })
-        );
+        return printer.isPrinterConnected().then(async () => {
+          printer.alignCenter();
+          await printer.printImage("./assets/header-logo.png");
+          printer.bold(true);
+          printer.setTextQuadArea();
+          printer.setTypeFontB();
+          printer.println("VELAYO BILLS PAYMENT AND");
+          printer.println("REMITTANCE SERVICES");
+          printer.setTextNormal();
+          printer.newLine();
+          printer.println("Owned and Operated by:");
+          printer.println("KRISTOPHER RYAN V. VELAYO");
+          printer.newLine();
+          printer.println(address);
+          printer.newLine();
+          printer.println("Contact #:");
+          printer.println("NON-VAT Reg. TIN 282-246-742-00000");
+          printer.println("REPRINT RECEIPT");
+          printer.newLine();
+          printer.println(`ACKNOWLEDGEMENT RECEIPT #: ${receiptNo}`);
+          printer.newLine();
+          printer.bold(true);
+          printer.println(getTitle());
+          printer.drawLine();
+          printer.newLine();
+          printer.println("TRANSACTION DETAILS");
+          printer.newLine();
+          printer.tableCustom([
+            // row
+            {
+              text: "TRANSACTION REF NO:",
+              align: "LEFT",
+              width: 0.5,
+              bold: true,
+            },
+            {
+              text: refNo.toLocaleUpperCase(),
+              align: "RIGHT",
+              width: 0.5,
+              bold: true,
+            },
+            // end row
+            // row
+            { text: "BILLER NAME:", align: "LEFT", width: 0.5, bold: true },
+            {
+              text: billerName.toLocaleUpperCase(),
+              align: "RIGHT",
+              width: 0.5,
+              bold: true,
+            },
+            // end row
+            // other details generation
+            ...[].concat(
+              ...Object.keys(otherDetails)
+                .filter(
+                  (e) =>
+                    !excludeOtherDetails.includes(e) &&
+                    !e.includes("pin_collection_#")
+                )
+                .map((e) => generateOtherDetails(e, otherDetails[e]))
+            ),
+            // end other details
+            { text: "AMOUNT:", align: "LEFT", width: 0.5, bold: true },
+            {
+              text: `${amount
+                .toString()
+                .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.00`,
+              align: "RIGHT",
+              width: 0.5,
+            },
+            // end row
+            // row
+            { text: "CONVENIENCE FEE:", align: "LEFT", width: 0.5, bold: true },
+            {
+              text: `${fee
+                .toString()
+                .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.00`,
+              align: "RIGHT",
+              width: 0.5,
+            },
+            // end row
+            // row
+            { text: "TOTAL AMOUNT:", align: "LEFT", width: 0.5, bold: true },
+            {
+              text: `${(amount + fee)
+                .toString()
+                .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.00`,
+              align: "RIGHT",
+              width: 0.5,
+            },
+            // end row
+          ]);
+          printer.newLine();
+          printer.bold(true);
+          printer.drawLine();
+          printer.newLine();
+          printer.println("THIS IS NOT AN OFFICIAL RECEIPT");
+          printer.println("THIS OR WILL BE ISSUED BY THE BILLING");
+          printer.println("COMPANY");
+          printer.newLine();
+          printer.alignLeft();
+          printer.println(
+            `DATE/TIME: ${dayjs(new Date()).format("YYYY-MM-DD hh:mmA")}`
+          );
+          printer.println(`MACHINE SERIAL NO. : ${device}`);
+          printer.newLine();
+          printer.println(`SPM NO: ${spm}`);
+          printer.newLine();
+          printer.bold(true);
+          printer.alignCenter();
+          printer.println("Powered By ECPAY");
+          printer.partialCut();
+
+          return await new Promise(async (resolve, reject) => {
+            return await printer
+              .execute()
+              .then(() => {
+                printer.clear();
+                res.json({ success: true, message: "Print Successfully" });
+                resolve("print success");
+              })
+              .catch((e) =>
+                res.json({ success: false, message: "Printer Error: " + e })
+              );
+          });
+        });
+      } else {
+        return res.json({
+          success: false,
+          message: "There is an error in the server",
+        });
+      }
+    })
+    .catch((error) => {
+      console.error(error);
     });
-  });
 });
 
 app.listen(port, () => {
