@@ -149,8 +149,16 @@ app.post("/print/shopee-collect", async (req, res) => {
 });
 
 app.post("/print/receipt", async (req, res) => {
-  const { type, billerName, receiptNo, refNo, fee, amount, branchId } =
-    req.body;
+  const {
+    type,
+    billerName,
+    receiptNo,
+    refNo,
+    fee,
+    amount,
+    branchId,
+    tellerId,
+  } = req.body;
   let { otherDetails } = req.body;
   otherDetails = JSON.parse(otherDetails);
 
@@ -315,6 +323,203 @@ app.post("/print/receipt", async (req, res) => {
           printer.println(`MACHINE SERIAL NO. : ${device}`);
           printer.newLine();
           printer.println(`SPM NO: ${spm}`);
+          printer.println(`Teller: ${tellerId}`);
+          printer.newLine();
+          printer.bold(true);
+          printer.alignCenter();
+          printer.println("Powered By ECPAY");
+          printer.partialCut();
+
+          return await new Promise(async (resolve, reject) => {
+            return await printer
+              .execute()
+              .then(() => {
+                printer.clear();
+                res.json({ success: true, message: "Print Successfully" });
+                resolve("print success");
+              })
+              .catch((e) =>
+                res.json({ success: false, message: "Printer Error: " + e })
+              );
+          });
+        });
+      } else {
+        return res.json({
+          success: false,
+          message: "There is an error in the server",
+        });
+      }
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+});
+
+app.post("/print/receipt-pos", async (req, res) => {
+  const { amount, cash, tellerId, branchId, receiptNo, refNo } = req.body;
+  let { itemDetails } = req.body;
+  itemDetails = JSON.parse(itemDetails);
+
+  await axios
+    .get(
+      `https://velayo-eservice.vercel.app/api/branch/get-branch?_id=6628ed9c83d3f9f834510e99` //${branchId}
+    )
+    .then(({ data }) => {
+      if (data.success) {
+        const { address, device, spm } = data.data;
+        const generateOtherDetails = (item) => {
+          let ret = [];
+
+          item.map(({ name, price, quantity, unit }) => {
+            ret.push({
+              text: name.toLocaleUpperCase(),
+              align: "LEFT",
+              width: 1,
+            });
+            ret.push({
+              text: `   ${price
+                .toFixed(2)
+                .replace(/\d(?=(\d{3})+\.)/g, "$&,")} x ${quantity} ${unit}`,
+              align: "LEFT",
+              width: 0.5,
+            });
+            ret.push({
+              text: (price * quantity)
+                .toFixed(2)
+                .replace(/\d(?=(\d{3})+\.)/g, "$&,"),
+              align: "RIGHT",
+              width: 0.5,
+              bold: true,
+            });
+          });
+
+          return ret;
+        };
+
+        return printer.isPrinterConnected().then(async () => {
+          printer.alignCenter();
+          await printer.printImage("./assets/header-logo.png");
+          printer.bold(true);
+          printer.setTextQuadArea();
+          printer.setTypeFontB();
+          printer.println("VELAYO BILLS PAYMENT AND");
+          printer.println("REMITTANCE SERVICES");
+          printer.setTextNormal();
+          printer.newLine();
+          printer.println("Owned and Operated by:");
+          printer.println("KRISTOPHER RYAN V. VELAYO");
+          printer.newLine();
+          printer.println(address);
+          printer.newLine();
+          printer.println("Contact #:");
+          printer.println("NON-VAT Reg. TIN 282-246-742-00000");
+          printer.println("REPRINT RECEIPT");
+          printer.newLine();
+          printer.println(`ACKNOWLEDGEMENT RECEIPT #: ${receiptNo}`);
+          printer.newLine();
+          printer.bold(true);
+          printer.println("Miscellaneous");
+          printer.drawLine();
+          printer.newLine();
+          printer.println("TRANSACTION DETAILS");
+          printer.newLine();
+          printer.bold(false);
+          printer.tableCustom(
+            // {
+            //   text: "TRANSACTION REF NO:",
+            //   align: "LEFT",
+            //   width: 0.5,
+            //   bold: true,
+            // },
+            // {
+            //   text: refNo.toLocaleUpperCase(),
+            //   align: "RIGHT",
+            //   width: 0.5,
+            //   bold: true,
+            // },
+            // other details generation
+            generateOtherDetails(itemDetails)
+            // end other details
+          );
+          printer.newLine();
+          printer.tableCustom([
+            {
+              text: "TOTAL",
+              align: "LEFT",
+              width: 0.5,
+              bold: true,
+            },
+            {
+              text: amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,"),
+              align: "RIGHT",
+              width: 0.5,
+              bold: true,
+            },
+            {
+              text: "CASH",
+              align: "LEFT",
+              width: 0.5,
+            },
+            {
+              text: cash.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,"),
+              align: "RIGHT",
+              width: 0.5,
+            },
+            {
+              text: "CHANGE",
+              align: "LEFT",
+              width: 0.5,
+            },
+            {
+              text: (cash - amount)
+                .toFixed(2)
+                .replace(/\d(?=(\d{3})+\.)/g, "$&,"),
+              align: "RIGHT",
+              width: 0.5,
+            },
+          ]);
+          printer.drawLine();
+          // printer.tableCustom([
+          //   {
+          //     text: "Vatable",
+          //     align: "LEFT",
+          //     width: 0.5,
+          //     bold: true,
+          //   },
+          //   {
+          //     text: cash.toFixed(2),
+          //     align: "RIGHT",
+          //     width: 0.5,
+          //     bold: true,
+          //   },
+          //   {
+          //     text: "CHANGE",
+          //     align: "LEFT",
+          //     width: 0.5,
+          //     bold: true,
+          //   },
+          //   {
+          //     text: (cash - amount).toFixed(2),
+          //     align: "RIGHT",
+          //     width: 0.5,
+          //     bold: true,
+          //   },
+          // ]);
+          printer.bold(true);
+          // printer.drawLine();
+          printer.newLine();
+          printer.println("THIS IS NOT AN OFFICIAL RECEIPT");
+          printer.println("THIS OR WILL BE ISSUED BY THE BILLING");
+          printer.println("COMPANY");
+          printer.newLine();
+          printer.alignLeft();
+          printer.println(
+            `DATE/TIME: ${dayjs(new Date()).format("YYYY-MM-DD hh:mmA")}`
+          );
+          printer.println(`MACHINE SERIAL NO. : ${device}`);
+          printer.newLine();
+          printer.println(`SPM NO: ${spm}`);
+          printer.println(`teller: ${tellerId}`);
           printer.newLine();
           printer.bold(true);
           printer.alignCenter();
