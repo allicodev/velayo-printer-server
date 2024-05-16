@@ -159,6 +159,7 @@ app.post("/print/receipt", async (req, res) => {
     branchId,
     tellerId,
   } = req.body;
+
   let { otherDetails } = req.body;
   otherDetails = JSON.parse(otherDetails);
 
@@ -362,7 +363,7 @@ app.post("/print/receipt-pos", async (req, res) => {
 
   await axios
     .get(
-      `https://velayo-eservice.vercel.app/api/branch/get-branch?_id=6628ed9c83d3f9f834510e99` //${branchId}
+      `https://velayo-eservice.vercel.app/api/branch/get-branch?_id=${branchId}`
     )
     .then(({ data }) => {
       if (data.success) {
@@ -479,32 +480,6 @@ app.post("/print/receipt-pos", async (req, res) => {
             },
           ]);
           printer.drawLine();
-          // printer.tableCustom([
-          //   {
-          //     text: "Vatable",
-          //     align: "LEFT",
-          //     width: 0.5,
-          //     bold: true,
-          //   },
-          //   {
-          //     text: cash.toFixed(2),
-          //     align: "RIGHT",
-          //     width: 0.5,
-          //     bold: true,
-          //   },
-          //   {
-          //     text: "CHANGE",
-          //     align: "LEFT",
-          //     width: 0.5,
-          //     bold: true,
-          //   },
-          //   {
-          //     text: (cash - amount).toFixed(2),
-          //     align: "RIGHT",
-          //     width: 0.5,
-          //     bold: true,
-          //   },
-          // ]);
           printer.bold(true);
           // printer.drawLine();
           printer.newLine();
